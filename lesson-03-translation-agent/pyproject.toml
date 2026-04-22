@@ -1,0 +1,12 @@
+[project]
+name = "lesson-03-translation-agent"
+version = "0.1.0"
+description = "Lesson 03 — File translation agent using Claude and Deep Translator"
+requires-python = ">=3.9"
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "deep-translator>=1.11.0",
+    "python-docx>=1.1.0",
+]
