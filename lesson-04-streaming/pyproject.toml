@@ -1,0 +1,12 @@
+[project]
+name = "lesson-04-streaming"
+version = "0.1.0"
+description = "Lesson 04 — Streaming responses with FastAPI and SSE"
+requires-python = ">=3.9"
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "fastapi>=0.110.0",
+    "uvicorn>=0.29.0",
+]

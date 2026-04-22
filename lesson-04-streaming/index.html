@@ -1,0 +1,194 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Lesson 04 — Streaming Chat</title>
+    <style>
+        * { box-sizing: border-box; margin: 0; padding: 0; }
+        body {
+            font-family: -apple-system, sans-serif;
+            background: #f5f5f5;
+            height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            padding: 2rem;
+        }
+        h1 {
+            font-size: 1.2rem;
+            font-weight: 500;
+            color: #333;
+            margin-bottom: 1.5rem;
+        }
+        #chat-box {
+            width: 100%;
+            max-width: 720px;
+            flex: 1;
+            overflow-y: auto;
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 12px;
+            padding: 1.5rem;
+            margin-bottom: 1rem;
+            display: flex;
+            flex-direction: column;
+            gap: 1rem;
+        }
+        .message {
+            padding: 0.75rem 1rem;
+            border-radius: 8px;
+            max-width: 85%;
+            line-height: 1.6;
+            font-size: 0.95rem;
+        }
+        .user {
+            background: #e8f4fd;
+            color: #0a4f7a;
+            align-self: flex-end;
+        }
+        .assistant {
+            background: #f0f0f0;
+            color: #333;
+            align-self: flex-start;
+        }
+        .assistant.streaming::after {
+            content: "▋";
+            animation: blink 0.7s infinite;
+        }
+        @keyframes blink {
+            0%, 100% { opacity: 1; }
+            50%       { opacity: 0; }
+        }
+        #input-area {
+            width: 100%;
+            max-width: 720px;
+            display: flex;
+            gap: 0.5rem;
+        }
+        #user-input {
+            flex: 1;
+            padding: 0.75rem 1rem;
+            border: 1px solid #e0e0e0;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            outline: none;
+        }
+        #user-input:focus { border-color: #0a4f7a; }
+        button {
+            padding: 0.75rem 1.5rem;
+            background: #0a4f7a;
+            color: white;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            cursor: pointer;
+        }
+        button:disabled { background: #aaa; cursor: not-allowed; }
+        #token-info {
+            font-size: 0.75rem;
+            color: #999;
+            margin-top: 0.5rem;
+        }
+    </style>
+</head>
+<body>
+    <h1>Lesson 04 — Streaming Chat</h1>
+
+    <div id="chat-box"></div>
+
+    <div id="input-area">
+        <input
+            type="text"
+            id="user-input"
+            placeholder="Type a message..."
+            onkeydown="if(event.key==='Enter') sendMessage()"
+        />
+        <button id="send-btn" onclick="sendMessage()">Send</button>
+    </div>
+    <div id="token-info"></div>
+
+    <script>
+        // Conversation history — sent with every request
+        let history = [];
+
+        async function sendMessage() {
+            const input = document.getElementById("user-input");
+            const sendBtn = document.getElementById("send-btn");
+            const chatBox = document.getElementById("chat-box");
+            const tokenInfo = document.getElementById("token-info");
+
+            const message = input.value.trim();
+            if (!message) return;
+
+            // Disable input while streaming
+            input.value = "";
+            input.disabled = true;
+            sendBtn.disabled = true;
+
+            // Show user message
+            const userDiv = document.createElement("div");
+            userDiv.className = "message user";
+            userDiv.textContent = message;
+            chatBox.appendChild(userDiv);
+
+            // Create assistant message div — will fill as tokens arrive
+            const assistantDiv = document.createElement("div");
+            assistantDiv.className = "message assistant streaming";
+            chatBox.appendChild(assistantDiv);
+            chatBox.scrollTop = chatBox.scrollHeight;
+
+            let fullResponse = "";
+            const startTime = Date.now();
+
+            // EventSource does not support POST — use fetch with ReadableStream
+            const response = await fetch("/chat", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ message, history })
+            });
+
+            const reader = response.body.getReader();
+            const decoder = new TextDecoder();
+
+            // Read SSE chunks as they arrive
+            while (true) {
+                const { done, value } = await reader.read();
+                if (done) break;
+
+                const text = decoder.decode(value);
+                const lines = text.split("\n");
+
+                for (const line of lines) {
+                    if (!line.startsWith("data: ")) continue;
+                    const chunk = line.slice(6); // remove "data: " prefix
+
+                    if (chunk === "[DONE]") {
+                        // Stream finished
+                        assistantDiv.classList.remove("streaming");
+                        const elapsed = ((Date.now() - startTime) / 1000).toFixed(1);
+                        const words = fullResponse.split(" ").length;
+                        tokenInfo.textContent =
+                            `${words} words · ${elapsed}s · ${Math.round(words/elapsed)} words/sec`;
+                        break;
+                    }
+
+                    // Append token to the assistant message
+                    fullResponse += chunk;
+                    assistantDiv.textContent = fullResponse;
+                    chatBox.scrollTop = chatBox.scrollHeight;
+                }
+            }
+
+            // Add to history for next turn
+            history.push({ role: "user",      content: message });
+            history.push({ role: "assistant", content: fullResponse });
+
+            // Re-enable input
+            input.disabled = false;
+            sendBtn.disabled = false;
+            input.focus();
+        }
+    </script>
+</body>
+</html>
