@@ -1,0 +1,10 @@
+[project]
+name = "lesson-06-memory"
+version = "0.1.0"
+description = "Lesson 06 — Memory and context management"
+requires-python = ">=3.9"
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+]
