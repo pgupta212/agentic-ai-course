@@ -1,0 +1,15 @@
+[project]
+name = "lesson-07-github-mcp"
+version = "0.1.0"
+description = "Lesson 07 — Custom MCP server wrapping the GitHub API"
+requires-python = ">=3.10"
+dependencies = [
+    "anthropic>=0.40.0",
+    "python-dotenv>=1.0.0",
+    "rich>=13.0.0",
+    "mcp>=1.0.0",
+    "httpx>=0.28.0",
+]
+
+[tool.setuptools]
+py-modules = []
